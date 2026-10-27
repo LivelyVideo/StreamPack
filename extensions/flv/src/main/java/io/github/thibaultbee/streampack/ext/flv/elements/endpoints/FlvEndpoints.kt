@@ -106,8 +106,21 @@ sealed class FlvEndpoint(
     }
 
     private suspend fun getStartUpTimestamp(ptsInUs: Long): Long = timestampMutex.withLock {
-        // FLV timestamps start at 0
-        if (startUpTimestamp == INVALID_TIMESTAMP) {
+        // FLV timestamps start at 0. If a later frame arrives with an earlier PTS
+        // (e.g. audio starts a hair before video and establishes the baseline, then
+        // the first video keyframe arrives with a slightly earlier PTS from a
+        // sibling capture clock), roll the baseline back so that keyframe doesn't
+        // get a negative relative timestamp and get dropped by FlvTagBuilder.
+        // Dropping the very first video keyframe is fatal for strict RTMP origins
+        // (e.g. nginx-rtmp): they never see a valid IDR within the startup timeout
+        // and RST the connection. Red5 is lenient; nginx-rtmp isn't.
+        //
+        // Trade-off: any frames already written with the previous (higher) baseline
+        // have slightly earlier timestamps than their true position relative to the
+        // new baseline. In practice this is a sub-millisecond A/V drift at startup
+        // and the receiver tolerates it. The alternative — dropping the keyframe —
+        // kills the whole stream.
+        if (startUpTimestamp == INVALID_TIMESTAMP || ptsInUs < startUpTimestamp) {
             startUpTimestamp = ptsInUs
         }
         startUpTimestamp

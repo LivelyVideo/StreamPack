@@ -216,8 +216,15 @@ class RtmpEndpoint internal constructor(
     }
 
     private suspend fun getStartUpTimestamp(ptsInUs: Long): Long = timestampMutex.withLock {
-        // FLV timestamps start at 0
-        if (startUpTimestamp == INVALID_TIMESTAMP) {
+        // FLV timestamps start at 0. If a later frame arrives with an earlier PTS
+        // (e.g. audio starts a hair before video and establishes the baseline, then
+        // the first video keyframe arrives with a slightly earlier PTS from a
+        // sibling capture clock), roll the baseline back so that keyframe doesn't
+        // get a negative relative timestamp and get dropped by FlvTagBuilder.
+        // Dropping the very first video keyframe is fatal for strict RTMP origins
+        // (e.g. nginx-rtmp): they never see a valid IDR within the startup timeout
+        // and RST the connection. Red5 is lenient; nginx-rtmp isn't.
+        if (startUpTimestamp == INVALID_TIMESTAMP || ptsInUs < startUpTimestamp) {
             startUpTimestamp = ptsInUs
         }
         startUpTimestamp

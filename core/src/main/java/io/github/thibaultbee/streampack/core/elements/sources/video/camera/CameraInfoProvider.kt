@@ -69,14 +69,19 @@ class CameraInfoProvider(
     }
 
     override fun getSurfaceSize(targetResolution: Size): Size {
-        return if (supportedSizes.isEmpty() || supportedSizes.contains(targetResolution)) {
-            targetResolution
+        // Local patch (lively-video/aperture-live-android):
+        // A landscape-native sensor (SENSOR_ORIENTATION 90 or 270) cannot naturally fill a
+        // portrait SurfaceTexture. When we pass a portrait target through, the camera driver
+        // aspect-crops the sensor to fit, then SurfaceOutput's transform math applies a
+        // second fit-inside crop. Return a landscape surface size so the sensor fills the
+        // buffer cleanly and SurfaceOutput rotates a matching-aspect source into the
+        // portrait target with no crop.
+        val sensorIsLandscapeNative = rotationDegrees == 90 || rotationDegrees == 270
+        val targetIsPortrait = targetResolution.height > targetResolution.width
+        return if (sensorIsLandscapeNative && targetIsPortrait) {
+            Size(targetResolution.height, targetResolution.width)
         } else {
-            // Pick the closest supported camera size (e.g. 1920x1080 or 1440x1080)
-            CameraSizes.getPreviewOutputSize(
-                supportedSizes,
-                targetResolution
-            )
+            targetResolution
         }
     }
 
