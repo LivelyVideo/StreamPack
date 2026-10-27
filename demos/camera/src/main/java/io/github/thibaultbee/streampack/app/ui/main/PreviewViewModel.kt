@@ -49,6 +49,7 @@ import io.github.thibaultbee.streampack.core.elements.endpoints.MediaSinkType
 import io.github.thibaultbee.streampack.core.elements.metrics.WithEndpointMetrics
 import io.github.thibaultbee.streampack.core.elements.metrics.metricsFlow
 import io.github.thibaultbee.streampack.core.elements.metrics.writtenBitrateInBps
+import io.github.thibaultbee.streampack.core.elements.sources.audio.audiorecord.MicrophoneSourceFactory
 import io.github.thibaultbee.streampack.core.elements.sources.video.IVideoSource
 import io.github.thibaultbee.streampack.core.elements.sources.video.bitmap.BitmapSourceFactory
 import io.github.thibaultbee.streampack.core.elements.sources.video.camera.CameraSettings
@@ -270,15 +271,22 @@ class PreviewViewModel(private val application: Application) : ObservableViewMod
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     fun configureMicrophone() {
         viewModelScope.launch {
-            try {
-                storageRepository.audioConfigFlow.first()?.let { audioStreamer?.setAudioConfig(it) }
-                    ?: Log.i(
-                        TAG,
-                        "Audio is disabled"
-                    )
-            } catch (t: Throwable) {
-                Log.e(TAG, "configureAudio failed", t)
-                _streamerErrorLiveData.postValue("configureAudio: ${t.message ?: "Unknown error"}")
+            audioStreamer?.let { streamer ->
+                try {
+                    storageRepository.audioConfigFlow.first()?.let { streamer.setAudioConfig(it) }
+                        ?: Log.i(
+                            TAG,
+                            "Audio is disabled"
+                        )
+                    if (streamer.audioInput.sourceFlow.value == null) {
+                        streamer.setAudioSource(MicrophoneSourceFactory())
+                    } else {
+                        Log.i(TAG, "Camera source already set")
+                    }
+                } catch (t: Throwable) {
+                    Log.e(TAG, "configureAudio failed", t)
+                    _streamerErrorLiveData.postValue("configureAudio: ${t.message ?: "Unknown error"}")
+                }
             }
         }
     }
@@ -359,12 +367,22 @@ class PreviewViewModel(private val application: Application) : ObservableViewMod
         }
     }
 
+    val isAudioMuted = MutableLiveData(false)
+
     fun setAudioIsMuted(isMuted: Boolean) {
         audioStreamer?.audioInput?.isMuted = isMuted
+        isAudioMuted.value = isMuted
     }
 
+    val isVideoMuted = MutableLiveData(false)
+
     fun setVideoIsMuted(isMuted: Boolean) {
-        requiredStreamer.videoInput.processor.isMuted = isMuted
+        try {
+            streamer?.videoInput?.processor?.isMuted = isMuted
+            isVideoMuted.value = isMuted
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set video isMuted", e)
+        }
     }
 
     @RequiresPermission(Manifest.permission.CAMERA)
@@ -391,7 +409,12 @@ class PreviewViewModel(private val application: Application) : ObservableViewMod
          */
         viewModelScope.launch(defaultDispatcher) {
             videoSourceMutex.withLock {
-                streamer?.setNextCameraId(application)
+                try {
+                    streamer?.setNextCameraId(application)
+                } catch (t: Throwable) {
+                    Log.e(TAG, "toggleCamera failed", t)
+                    _streamerErrorLiveData.postValue("toggleCamera: ${t.message ?: "Unknown error"}")
+                }
             }
         }
     }

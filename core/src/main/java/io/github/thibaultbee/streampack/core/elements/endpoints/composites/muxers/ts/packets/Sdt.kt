@@ -22,10 +22,8 @@ import io.github.thibaultbee.streampack.core.elements.utils.extensions.put
 import io.github.thibaultbee.streampack.core.elements.utils.extensions.putShort
 import io.github.thibaultbee.streampack.core.elements.utils.extensions.putString
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 import java.nio.ByteBuffer
 
-@OptIn(InternalStreamPackApi::class)
 class Sdt(
     byteBufferPool: ByteBufferPool,
     listener: IMuxerInternal.IMuxerListener? = null,
@@ -66,9 +64,9 @@ class Sdt(
         return nBits
     }
 
-    fun write() {
+    fun write(timestamp: Long) {
         if (services.isNotEmpty()) {
-            write(toByteBuffer())
+            write(toByteBuffer(), timestamp)
         }
     }
 

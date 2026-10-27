@@ -81,7 +81,8 @@ class RtmpEndpoint internal constructor(
     private var videoPayloadSendDroppedSize = 0L
 
     private val flvTagChannel = ChannelWithCloseableData<FLVTag>(
-        10 /* Arbitrary buffer size. TODO: add a parameter to set it */, BufferOverflow.DROP_OLDEST,
+        FLV_TAG_CHANNEL_SIZE,
+        BufferOverflow.DROP_OLDEST,
         onUndeliveredElement = { flvTag ->
             synchronized(metricsLock) {
                 val payloadSize = flvTag.data.getSize(AmfVersion.AMF0)
@@ -122,8 +123,13 @@ class RtmpEndpoint internal constructor(
             }
         }
 
+    private val rtmpRawMetrics = RtmpRawMetrics(
+        clientProvider = { rtmpClient },
+        metricsProvider = { syncMetrics }
+    )
+
     override val metrics: RtmpEndpointMetrics
-        get() = RtmpEndpointMetrics { syncMetrics }
+        get() = RtmpEndpointMetrics(rtmpRawMetrics)
 
     private val _isOpenFlow = MutableStateFlow(false)
     override val isOpenFlow = _isOpenFlow.asStateFlow()
@@ -303,6 +309,9 @@ class RtmpEndpoint internal constructor(
         private const val TAG = "RtmpEndpoint"
 
         private const val INVALID_TIMESTAMP = -1L
+
+        private const val FLV_TAG_CHANNEL_SIZE =
+            8 // Arbitrary buffer size. It's Audio output size + Video output size in the encoding output
 
         init {
             System.setProperty("kotlinx.io.pool.size.bytes", "4194304") // 4MB

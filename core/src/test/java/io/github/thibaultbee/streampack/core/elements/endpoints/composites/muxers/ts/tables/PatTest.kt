@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.tables
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.TSResourcesUtils
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.data.Service
@@ -25,7 +24,6 @@ import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxer
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
 import org.junit.Test
 
-@OptIn(InternalStreamPackApi::class)
 class PatTest {
     /**
      * Assert generated PAT is equivalent to an expected sample
@@ -47,7 +45,7 @@ class PatTest {
         Pmt(byteBufferPool, listener, service, emptyList(), 0x64).run { service.pmt = this }
 
         Pat(byteBufferPool, listener, listOf(service), tsId = 0x437, versionNumber = 3).run {
-            write()
+            write(0)
         }
     }
 }

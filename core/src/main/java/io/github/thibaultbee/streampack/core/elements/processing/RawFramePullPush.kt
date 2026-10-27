@@ -20,7 +20,6 @@ import io.github.thibaultbee.streampack.core.elements.sources.audio.IAudioFrameS
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
 import io.github.thibaultbee.streampack.core.elements.utils.pool.RawFramePool
 import io.github.thibaultbee.streampack.core.logger.Logger
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -40,7 +39,6 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param bufferPool the [ByteBuffer] pool
  * @param processDispatcher the dispatcher to process frames on
  */
-@OptIn(InternalStreamPackApi::class)
 class RawFramePullPush(
     private val frameProcessor: IProcessor<RawFrame>,
     val onFrame: suspend (RawFrame) -> Unit,
@@ -74,12 +72,15 @@ class RawFramePullPush(
         while (isActive) {
             val rawFrame = mutex.withLock {
                 val unwrapSource = source ?: return@withLock null
+                val buffer = bufferPool.get(unwrapSource.minBufferSize)
                 try {
-                    val buffer = bufferPool.get(unwrapSource.minBufferSize)
                     val timestampInUs = unwrapSource.fillAudioFrame(buffer)
-                    pool.get(buffer, timestampInUs)
+                    pool.get(buffer, timestampInUs) {
+                        bufferPool.put(buffer)
+                    }
                 } catch (t: Throwable) {
                     Logger.e(TAG, "Failed to get frame: ${t.message}")
+                    bufferPool.put(buffer)
                     null
                 }
             }

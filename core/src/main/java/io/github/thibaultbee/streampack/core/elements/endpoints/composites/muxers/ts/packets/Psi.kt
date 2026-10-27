@@ -19,10 +19,8 @@ import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxer
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.utils.CRC32
 import io.github.thibaultbee.streampack.core.elements.utils.extensions.put
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 import java.nio.ByteBuffer
 
-@OptIn(InternalStreamPackApi::class)
 open class Psi(
     byteBufferPool: ByteBufferPool,
     listener: IMuxerInternal.IMuxerListener? = null,
@@ -40,8 +38,8 @@ open class Psi(
         const val PSI_HEADER_SIZE = 9 // contains pointer_field
     }
 
-    protected fun write(buffer: ByteBuffer) {
-        write(payload = toByteBuffer(buffer))
+    protected fun write(buffer: ByteBuffer, timestamp: Long) {
+        write(payload = toByteBuffer(buffer), timestamp = timestamp)
     }
 
     fun toByteBuffer(payload: ByteBuffer): ByteBuffer {

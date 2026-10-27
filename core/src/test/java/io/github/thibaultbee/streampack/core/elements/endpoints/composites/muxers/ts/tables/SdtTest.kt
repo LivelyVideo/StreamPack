@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 package io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.tables
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.TSResourcesUtils
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.data.Service
@@ -24,7 +23,6 @@ import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxer
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
 import org.junit.Test
 
-@OptIn(InternalStreamPackApi::class)
 class SdtTest {
     /**
      * Assert generated Sdt is equivalent to an expected sample
@@ -44,7 +42,7 @@ class SdtTest {
             )
         )
         Sdt(ByteBufferPool(true), listener, services, 0x0001, 0xff01.toShort()).run {
-            write()
+            write(0)
         }
     }
 }

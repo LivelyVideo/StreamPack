@@ -61,6 +61,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -84,7 +85,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param surfaceProcessorFactory the factory to create the surface processor
  * @param dispatcherProvider the coroutine dispatcher
  */
-@OptIn(InternalStreamPackApi::class)
+@InternalStreamPackApi
 open class StreamerPipeline(
     protected val context: Context,
     val withAudio: Boolean = true,
@@ -390,15 +391,17 @@ open class StreamerPipeline(
                     outputsToJobsMap[output] = jobs
                 }
             } catch (t: Throwable) {
-                removeOutput(output)
-                try {
-                    output.release()
-                } catch (t2: Throwable) {
-                    Logger.e(
-                        TAG,
-                        "Error while releasing output $output after a failure to add it",
-                        t2
-                    )
+                withContext(NonCancellable) {
+                    removeOutput(output)
+                    try {
+                        output.release()
+                    } catch (t2: Throwable) {
+                        Logger.e(
+                            TAG,
+                            "Error while releasing output $output after a failure to add it",
+                            t2
+                        )
+                    }
                 }
                 throw t
             }
@@ -768,7 +771,9 @@ open class StreamerPipeline(
             } catch (t: Throwable) {
                 // Restore audio source state
                 if (!isAudioSourceStreaming) {
-                    _audioInput?.stopStream()
+                    withContext(NonCancellable) {
+                        _audioInput?.stopStream()
+                    }
                 }
                 throw t
             }
@@ -1040,21 +1045,6 @@ open class StreamerPipeline(
     companion object {
         private const val TAG = "StreamerPipeline"
     }
-
-    /**
-     * Audio output mode.
-     */
-    enum class AudioInputMode {
-        /**
-         * The audio is pushed to the output.
-         */
-        PUSH,
-
-        /**
-         * The audio is pulled by the output.
-         */
-        CALLBACK,
-    }
 }
 
 /**
@@ -1062,7 +1052,23 @@ open class StreamerPipeline(
  *
  * @see [StreamerPipeline.release]
  */
+@InternalStreamPackApi
 fun StreamerPipeline.releaseBlocking(dispatcher: CoroutineDispatcher = Dispatchers.Default) =
     runBlocking(dispatcher) {
         release()
     }
+
+/**
+ * Audio output mode.
+ */
+enum class AudioInputMode {
+    /**
+     * The audio is pushed to the output.
+     */
+    PUSH,
+
+    /**
+     * The audio is pulled by the output.
+     */
+    CALLBACK,
+}

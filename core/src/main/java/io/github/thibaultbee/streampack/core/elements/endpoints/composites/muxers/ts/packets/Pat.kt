@@ -19,11 +19,9 @@ import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxer
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.data.ITSElement
 import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxers.ts.data.Service
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 import java.nio.ByteBuffer
 import kotlin.experimental.or
 
-@OptIn(InternalStreamPackApi::class)
 class Pat(
     byteBufferPool: ByteBufferPool,
     listener: IMuxerInternal.IMuxerListener? = null,
@@ -54,9 +52,9 @@ class Pat(
     override val size: Int
         get() = bitSize / Byte.SIZE_BITS
 
-    fun write() {
+    fun write(timestamp: Long) {
         if (services.any { it.pmt != null }) {
-            write(toByteBuffer())
+            write(toByteBuffer(), timestamp)
         }
     }
 

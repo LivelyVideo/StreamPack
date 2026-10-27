@@ -25,10 +25,8 @@ import io.github.thibaultbee.streampack.core.elements.endpoints.composites.muxer
 import io.github.thibaultbee.streampack.core.elements.utils.extensions.put
 import io.github.thibaultbee.streampack.core.elements.utils.extensions.putShort
 import io.github.thibaultbee.streampack.core.elements.utils.pool.ByteBufferPool
-import io.github.thibaultbee.streampack.core.utils.InternalStreamPackApi
 import java.nio.ByteBuffer
 
-@OptIn(InternalStreamPackApi::class)
 class Pmt(
     byteBufferPool: ByteBufferPool,
     listener: IMuxerInternal.IMuxerListener? = null,
@@ -62,9 +60,9 @@ class Pmt(
             MediaFormat.MIMETYPE_VIDEO_HEVC
         ) * streams.filter { it.config.mimeType == MediaFormat.MIMETYPE_VIDEO_HEVC }.size
 
-    fun write() {
+    fun write(timestamp: Long) {
         if (service.pcrPid != null) {
-            write(toByteBuffer())
+            write(toByteBuffer(), timestamp)
         }
     }
 
